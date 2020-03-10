@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://titman.github.io</id>
     <title>// TODO:</title>
-    <updated>2020-02-25T03:44:57.282Z</updated>
+    <updated>2020-03-10T04:05:55.207Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://titman.github.io"/>
     <link rel="self" href="https://titman.github.io/atom.xml"/>
@@ -10,6 +10,82 @@
     <logo>https://titman.github.io/images/avatar.png</logo>
     <icon>https://titman.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, // TODO:</rights>
+    <entry>
+        <title type="html"><![CDATA[iOS&MacOS 内核之 CPU 占用率信息]]></title>
+        <id>https://titman.github.io/post/iosmacos-nei-he-zhi-cpu-zhan-yong-lu-xin-xi/</id>
+        <link href="https://titman.github.io/post/iosmacos-nei-he-zhi-cpu-zhan-yong-lu-xin-xi/">
+        </link>
+        <updated>2020-03-10T03:46:25.000Z</updated>
+        <summary type="html"><![CDATA[<h1 id="一-ios-的-cpu-占用率实现">一、iOS 的 CPU 占用率实现</h1>
+<hr>
+<p>iOS 由于系统的限制，在不越狱的情况下无法获知整个系统的 CPU 信息，只能拿到自己 App 的所有线程信息，然后把 CPU 时间全部加起来得到一个大概的数值以供参考。可以参考腾讯开源的 <a href="https://github.com/Tencent/matrix/blob/master/matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/Handler/WCPowerConsumeStackCollector.mm">Matrix</a> 的实现。代码太长我们只看核心部分:</p>
+<pre><code class="language-cpp">    // 取当前进程基础信息，其实不取也没有关系
+    kr = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) tinfo, &amp;task_info_count);
+
+    // 取当前进程的所有线程
+    kr = task_threads(mach_task_self(), &amp;thread_list, &amp;thread_count);
+
+     // 遍历所有线程，取一波 CPU 时间
+    for (j = 0; j &lt; thread_count; j++) {</code></pre>
+]]></summary>
+        <content type="html"><![CDATA[<h1 id="一-ios-的-cpu-占用率实现">一、iOS 的 CPU 占用率实现</h1>
+<hr>
+<p>iOS 由于系统的限制，在不越狱的情况下无法获知整个系统的 CPU 信息，只能拿到自己 App 的所有线程信息，然后把 CPU 时间全部加起来得到一个大概的数值以供参考。可以参考腾讯开源的 <a href="https://github.com/Tencent/matrix/blob/master/matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/Handler/WCPowerConsumeStackCollector.mm">Matrix</a> 的实现。代码太长我们只看核心部分:</p>
+<pre><code class="language-cpp">    // 取当前进程基础信息，其实不取也没有关系
+    kr = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) tinfo, &amp;task_info_count);
+
+    // 取当前进程的所有线程
+    kr = task_threads(mach_task_self(), &amp;thread_list, &amp;thread_count);
+
+     // 遍历所有线程，取一波 CPU 时间
+    for (j = 0; j &lt; thread_count; j++) {
+&lt;!-- more --&gt;
+
+            // 取一下线程信息
+        thread_info_count = THREAD_INFO_MAX;
+        kr = thread_info(thread_list[j], THREAD_BASIC_INFO,
+                         (thread_info_t) thinfo, &amp;thread_info_count);
+
+        basic_info_th = (thread_basic_info_t) thinfo;
+
+            // 计算一下时间和 CPU Usage，需要除以一个 TH_USAGE_SCALE 的 scale factor
+        if (!(basic_info_th-&gt;flags &amp; TH_FLAGS_IDLE)) {
+            tot_sec = tot_sec + basic_info_th-&gt;user_time.seconds + basic_info_th-&gt;system_time.seconds;
+            tot_usec = tot_usec + basic_info_th-&gt;system_time.microseconds + basic_info_th-&gt;system_time.microseconds;
+            tot_cpu = tot_cpu + basic_info_th-&gt;cpu_usage / (float) TH_USAGE_SCALE * 100.0;
+        }
+
+    }
+
+     // 最后释放一下
+    kr = vm_deallocate(mach_task_self(), (vm_offset_t) thread_list, thread_count * sizeof(thread_t));
+</code></pre>
+<p>或者滴滴开源的 <a href="https://github.com/didi/DoraemonKit/blob/master/iOS/DoraemonKit/Src/Core/Plugin/CPU/Function/DoraemonCPUUtil.m">DoraemonKit</a> 的实现，跟上面的实现基本是一样的，只是省略了 <code>task_info()</code> 和 <code>user_time</code>, <code>system_time</code> 的计算。</p>
+<p>留意到我们需要把 <code>cpu_usage</code> 取得的值除以 <code>TH_USAGE_SCALE</code> 后才能获得一个准确的值。为啥？这个东西用来干啥子的？</p>
+<h3 id="11-th_usage_scale-是什么">1.1 TH_USAGE_SCALE 是什么</h3>
+<p>我们直接看看 <code>darwin-xnu</code> 对 <code>thread_info()</code> 的实现。这个函数只是简单地加了个锁，真正的实现在 <code>thread_info_internal()</code>。位置在 <code>osfmk/kern/thread.c</code>。</p>
+<p>如果参数为 <code>THREAD_BASIC_INFO</code> 则走 <code>retrieve_thread_basic_info()</code>。这个函数先取了一波系统 <code>timer</code> 的数据给 <code>user_time</code> 和 <code>system_time</code>，然后就是重头戏了:</p>
+<pre><code class="language-cpp">#define TH_USAGE_SCALE 1000
+
+    /*
+     *  To calculate cpu_usage, first correct for timer rate,
+     *  then for 5/8 ageing.  The correction factor [3/5] is
+     *  (1/(5/8) - 1).
+     */
+    basic_info-&gt;cpu_usage = 0;
+#if defined(CONFIG_SCHED_TIMESHARE_CORE)
+    if (sched_tick_interval) {
+        basic_info-&gt;cpu_usage = (integer_t)(((uint64_t)thread-&gt;cpu_usage
+                                    * TH_USAGE_SCALE) / sched_tick_interval);
+        basic_info-&gt;cpu_usage = (basic_info-&gt;cpu_usage * 3) / 5;
+    }
+#endif
+
+    if (basic_info-&gt;cpu_usage &gt; TH_USAGE_SCALE)
+        basic_info-&gt;cpu_usage = TH_USAGE_SCALE;
+</code></pre>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Hello Gridea]]></title>
         <id>https://titman.github.io/post/hello-gridea/</id>

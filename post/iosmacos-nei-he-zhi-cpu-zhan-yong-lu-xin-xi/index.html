@@ -3,7 +3,7 @@
     <meta charset="utf-8"/>
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Hello Gridea | // TODO:</title>
+<title>iOS&amp;MacOS 内核之 CPU 占用率信息 | // TODO:</title>
 <link rel="shortcut icon" href="https://titman.github.io/favicon.ico?v=1583813149217">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://titman.github.io/styles/main.css">
@@ -87,45 +87,83 @@
         <div class="post-detail gt-bg-theme-color-second">
             <article class="gt-post-content">
                 <h2 class="post-title">
-                    Hello Gridea
+                    iOS&amp;MacOS 内核之 CPU 占用率信息
                 </h2>
                 <div class="post-info">
                     <time class="post-time gt-c-content-color-first">
-                        · 2018-12-12 ·
+                        · 2020-03-10 ·
                     </time>
-                    
-                        <a href="https://titman.github.io/tag/NTySWOWIX/" class="post-tags">
-                            # Gridea
-                        </a>
                     
                 </div>
                 <div class="post-content">
-                    <p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
+                    <h1 id="一-ios-的-cpu-占用率实现">一、iOS 的 CPU 占用率实现</h1>
+<hr>
+<p>iOS 由于系统的限制，在不越狱的情况下无法获知整个系统的 CPU 信息，只能拿到自己 App 的所有线程信息，然后把 CPU 时间全部加起来得到一个大概的数值以供参考。可以参考腾讯开源的 <a href="https://github.com/Tencent/matrix/blob/master/matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/Handler/WCPowerConsumeStackCollector.mm">Matrix</a> 的实现。代码太长我们只看核心部分:</p>
+<pre><code class="language-cpp">    // 取当前进程基础信息，其实不取也没有关系
+    kr = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) tinfo, &amp;task_info_count);
+
+    // 取当前进程的所有线程
+    kr = task_threads(mach_task_self(), &amp;thread_list, &amp;thread_count);
+
+     // 遍历所有线程，取一波 CPU 时间
+    for (j = 0; j &lt; thread_count; j++) {
+&lt;!-- more --&gt;
+
+            // 取一下线程信息
+        thread_info_count = THREAD_INFO_MAX;
+        kr = thread_info(thread_list[j], THREAD_BASIC_INFO,
+                         (thread_info_t) thinfo, &amp;thread_info_count);
+
+        basic_info_th = (thread_basic_info_t) thinfo;
+
+            // 计算一下时间和 CPU Usage，需要除以一个 TH_USAGE_SCALE 的 scale factor
+        if (!(basic_info_th-&gt;flags &amp; TH_FLAGS_IDLE)) {
+            tot_sec = tot_sec + basic_info_th-&gt;user_time.seconds + basic_info_th-&gt;system_time.seconds;
+            tot_usec = tot_usec + basic_info_th-&gt;system_time.microseconds + basic_info_th-&gt;system_time.microseconds;
+            tot_cpu = tot_cpu + basic_info_th-&gt;cpu_usage / (float) TH_USAGE_SCALE * 100.0;
+        }
+
+    }
+
+     // 最后释放一下
+    kr = vm_deallocate(mach_task_self(), (vm_offset_t) thread_list, thread_count * sizeof(thread_t));
+</code></pre>
+<p>或者滴滴开源的 <a href="https://github.com/didi/DoraemonKit/blob/master/iOS/DoraemonKit/Src/Core/Plugin/CPU/Function/DoraemonCPUUtil.m">DoraemonKit</a> 的实现，跟上面的实现基本是一样的，只是省略了 <code>task_info()</code> 和 <code>user_time</code>, <code>system_time</code> 的计算。</p>
+<p>留意到我们需要把 <code>cpu_usage</code> 取得的值除以 <code>TH_USAGE_SCALE</code> 后才能获得一个准确的值。为啥？这个东西用来干啥子的？</p>
+<h3 id="11-th_usage_scale-是什么">1.1 TH_USAGE_SCALE 是什么</h3>
+<p>我们直接看看 <code>darwin-xnu</code> 对 <code>thread_info()</code> 的实现。这个函数只是简单地加了个锁，真正的实现在 <code>thread_info_internal()</code>。位置在 <code>osfmk/kern/thread.c</code>。</p>
+<p>如果参数为 <code>THREAD_BASIC_INFO</code> 则走 <code>retrieve_thread_basic_info()</code>。这个函数先取了一波系统 <code>timer</code> 的数据给 <code>user_time</code> 和 <code>system_time</code>，然后就是重头戏了:</p>
+<pre><code class="language-cpp">#define TH_USAGE_SCALE 1000
+
+    /*
+     *  To calculate cpu_usage, first correct for timer rate,
+     *  then for 5/8 ageing.  The correction factor [3/5] is
+     *  (1/(5/8) - 1).
+     */
+    basic_info-&gt;cpu_usage = 0;
+#if defined(CONFIG_SCHED_TIMESHARE_CORE)
+    if (sched_tick_interval) {
+        basic_info-&gt;cpu_usage = (integer_t)(((uint64_t)thread-&gt;cpu_usage
+                                    * TH_USAGE_SCALE) / sched_tick_interval);
+        basic_info-&gt;cpu_usage = (basic_info-&gt;cpu_usage * 3) / 5;
+    }
+#endif
+
+    if (basic_info-&gt;cpu_usage &gt; TH_USAGE_SCALE)
+        basic_info-&gt;cpu_usage = TH_USAGE_SCALE;
+</code></pre>
 
                 </div>
             </article>
         </div>
 
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://titman.github.io/post/hello-gridea/" class="post-title gt-a-link">
+                    Hello Gridea
+                </a>
+            </div>
         
 
         
