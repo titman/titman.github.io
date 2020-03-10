@@ -4,7 +4,7 @@
 <meta name="description" content=""/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>// TODO:</title>
-<link rel="shortcut icon" href="https://titman.github.io/favicon.ico?v=1583813149217">
+<link rel="shortcut icon" href="https://titman.github.io/favicon.ico?v=1583820003381">
 <link href="https://cdn.bootcss.com/font-awesome/5.11.2/css/all.css" rel="stylesheet">
 <link rel="stylesheet" href="https://titman.github.io/styles/main.css">
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
@@ -99,14 +99,6 @@
                         <h1 id="一-ios-的-cpu-占用率实现">一、iOS 的 CPU 占用率实现</h1>
 <hr>
 <p>iOS 由于系统的限制，在不越狱的情况下无法获知整个系统的 CPU 信息，只能拿到自己 App 的所有线程信息，然后把 CPU 时间全部加起来得到一个大概的数值以供参考。可以参考腾讯开源的 <a href="https://github.com/Tencent/matrix/blob/master/matrix/matrix-iOS/Matrix/WCCrashBlockMonitor/CrashBlockPlugin/Main/BlockMonitor/Handler/WCPowerConsumeStackCollector.mm">Matrix</a> 的实现。代码太长我们只看核心部分:</p>
-<pre><code class="language-cpp">    // 取当前进程基础信息，其实不取也没有关系
-    kr = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) tinfo, &amp;task_info_count);
-
-    // 取当前进程的所有线程
-    kr = task_threads(mach_task_self(), &amp;thread_list, &amp;thread_count);
-
-     // 遍历所有线程，取一波 CPU 时间
-    for (j = 0; j &lt; thread_count; j++) {</code></pre>
 
                     </div>
                     <div class="post-info">

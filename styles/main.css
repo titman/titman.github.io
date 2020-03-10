@@ -1740,11 +1740,11 @@ Orginal Style from ethanschoonover.com/solarized (c) Jeremy Hull <sourdrums@gmai
         }
         
         .gt-bg-accent-color-first {
-          background: #fa5252!important;
+          background: #ced4da!important;
         }
         
         .gt-bg-accent-color-second {
-          background: RGBA(250,82,82,0.2)!important;
+          background: RGBA(206,212,218,0.2)!important;
         }
         
         .gt-c-theme-color-first {
@@ -1764,11 +1764,11 @@ Orginal Style from ethanschoonover.com/solarized (c) Jeremy Hull <sourdrums@gmai
         }
         
         .gt-c-accent-color-first {
-          color: #fa5252!important;
+          color: #ced4da!important;
         }
         
         .gt-c-accent-color-second {
-          color: RGBA(250,82,82,0.2)!important;
+          color: RGBA(206,212,218,0.2)!important;
         }
         
         body {
@@ -1776,39 +1776,39 @@ Orginal Style from ethanschoonover.com/solarized (c) Jeremy Hull <sourdrums@gmai
         }
         
         a {
-          color: #fa5252!important;
+          color: #ced4da!important;
         }
         
         .post-content h1 {
           display: inline-block;
           color: #5f6169!important;
           position: relative!important;
-          background: linear-gradient(180deg, transparent 75%, RGBA(250,82,82,0.4) 0)!important;
+          background: linear-gradient(180deg, transparent 75%, RGBA(206,212,218,0.4) 0)!important;
         }
         
         .post-content h2 {
           display: inline-block;
           color: #5f6169!important;
           position: relative!important;
-          background: linear-gradient(180deg, transparent 75%, RGBA(250,82,82,0.4) 0)!important;
+          background: linear-gradient(180deg, transparent 75%, RGBA(206,212,218,0.4) 0)!important;
         }
         
         .gt-a-link {
           color: #5f6169!important;
           position: relative!important;
-          background: linear-gradient(180deg, transparent 75%, RGBA(250,82,82,0.4) 0)!important;
+          background: linear-gradient(180deg, transparent 75%, RGBA(206,212,218,0.4) 0)!important;
         }
         
         .gt-post-content a {
-          color: #fa5252!important;
+          color: #ced4da!important;
         }
         
         .gt-post-content blockquote {
-          background: RGBA(250,82,82,0.2)!important;
-          border-color: #fa5252!important;
+          background: RGBA(206,212,218,0.2)!important;
+          border-color: #ced4da!important;
         }
         
         .gt-post-content code {
-          background: RGBA(250,82,82,0.2)!important;
+          background: RGBA(206,212,218,0.2)!important;
         }
          
